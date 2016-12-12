@@ -1,7 +1,7 @@
 # Tiger-Compiler (Undergrad Project)
 Authors: 
-Gautam Kumar Singh
-Adolf Reuben D'souza
+(1)Gautam Kumar Singh
+(2)Adolf Reuben D'souza
 
 Compiler for the Tiger language 
 
