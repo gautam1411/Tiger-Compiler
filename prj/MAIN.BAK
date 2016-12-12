@@ -1,0 +1,57 @@
+#include"prj/globals.h"
+#include<conio.h>
+#include"prj/parse.c"
+#include"prj/Semant.c"
+#include"prj/table.c"
+#include "prj/intcodegen.c"
+#include "prj/tinycodegen.c"
+
+
+/* allocate global variables */
+int lineno = 0;
+FILE * source;
+FILE * listing;
+FILE *scanlisting;
+FILE *semlisting;
+FILE * code;
+FILE *tinycode;
+
+/* allocate and set tracing flags */
+int EchoSource = FALSE;
+int TraceScan = FALSE;
+int TraceParse = FALSE;
+int TraceAnalyze = FALSE;
+int TraceCode = FALSE;
+
+int Error = FALSE;
+
+
+int main()
+{
+TreeNode *x;
+clrscr();
+source=fopen("prj/fact.tig","r");
+scanlisting = fopen("prj/scanop.txt","w");
+
+code = fopen("prj/code.txt","w");
+if(TraceScan == TRUE)
+	listing = scanlisting;
+else
+	listing = fopen("prj/parserop.txt","w");
+
+x=parse();
+printTree(x);
+
+SEM_transProg(x);
+if(Error==FALSE)
+{
+genCode(x);
+codeGen(x,"tcode");
+}
+fclose(tinycode);
+fclose(source);
+fclose(scanlisting);
+fclose(listing);
+//getch();
+return 0;
+}

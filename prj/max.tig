@@ -1,0 +1,14 @@
+/*Program to find max of two numbers */
+let
+var a:int:=5
+var b:int:=6
+var sum:=0
+in
+	read(a);
+	read(b);
+	if(a<b)
+	then print(b)
+	else
+	print(a)
+	
+end
