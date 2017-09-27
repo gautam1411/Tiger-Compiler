@@ -1,6 +1,0 @@
-
->>> Semantic error at line 4: Type mismatch in variable declaration
-
->>> Semantic error at line 16: type mismatch in function arguments
-
->>> Semantic error at line 16: Number of function arguments do not match
