@@ -1,0 +1,13 @@
+/* locals hide globals */
+let
+	var n:=0
+	var fact:=1
+in
+ read(n);
+ while(n>0)
+ do (
+ fact:=fact*n;
+ n:=n-1);
+ print(fact)
+ 
+end
