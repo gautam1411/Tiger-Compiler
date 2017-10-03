@@ -1,0 +1,59 @@
+   1: let
+	1: reserved word: let
+   2: var a:int:=5
+	2: reserved word: var
+	2: ID, name= a
+	2: :
+	2: INT, val= int
+	2: :=
+	2: INT, val= 5
+   3: var b:int:=6
+	3: reserved word: var
+	3: ID, name= b
+	3: :
+	3: INT, val= int
+	3: :=
+	3: INT, val= 6
+   4: var sum:=0
+	4: reserved word: var
+	4: ID, name= sum
+	4: :=
+	4: INT, val= 0
+   5: in
+	5: reserved word: in
+   6: 	read(a);
+	6: ID, name= read
+	6: (
+	6: ID, name= a
+	6: )
+	6: ;
+   7: 	read(b);
+	7: ID, name= read
+	7: (
+	7: ID, name= b
+	7: )
+	7: ;
+   8: 	if(a<b)
+	8: reserved word: if
+	8: (
+	8: ID, name= a
+	8: <
+	8: ID, name= b
+	8: )
+   9: 	then print(b)
+	9: reserved word: then
+	9: ID, name= print
+	9: (
+	9: ID, name= b
+	9: )
+  10: 	else
+	10: reserved word: else
+  11: 	print(a)
+	11: ID, name= print
+	11: (
+	11: ID, name= a
+	11: )
+  12: 	
+  13: end
+	13: reserved word: end
+	14: EOF

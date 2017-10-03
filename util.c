@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "util.h"
+
+# define DEBUG TRUE
 void *checked_malloc(int len)
 {void *p = malloc(len);
  if (!p) {
@@ -22,8 +24,9 @@ string String(char *s)
 }
 
 void clrscr(){
-
-  printf("\x1B[2J\x1B[H"); 
+  #ifndef DEBUG
+  printf("\x1B[2J\x1B[H");
+  #endif 
 }
 
 

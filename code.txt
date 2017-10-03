@@ -1,0 +1,18 @@
+in:
+begin_args
+arg  a
+call read
+begin_args
+arg  b
+call read
+t1 = a<b;
+if_false t1 goto L1
+begin_args
+arg  b
+call print
+goto L2
+L1:
+begin_args
+arg  a
+call print
+L2:

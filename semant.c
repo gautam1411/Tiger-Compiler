@@ -131,10 +131,13 @@ ExpType getNodeType(TreeNode *t, S_table venv, S_table tenv)
 	return;
 
 
-
+  printf("At line : %d \n", __LINE__);
   transExp(tenv,venv,t);
+printf("At line : %d \n", __LINE__);
   S_dump(tenv, show);
-S_dump(venv, show);
+printf("At line : %d \n", __LINE__);
+  S_dump(venv, show);
+printf("At line : %d \n", __LINE__);
  }
 
  void transExp(S_table tenv,S_table venv, TreeNode *t)

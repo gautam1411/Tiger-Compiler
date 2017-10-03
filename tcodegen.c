@@ -673,7 +673,7 @@ void codeGen(TreeNode * syntaxTree, char * codefile)
 	int addr,savedLoc2;
    strcpy(s,"File: ");
    strcat(s,codefile);
-   tcode = fopen("prj/tcode.tm","w");
+   tcode = fopen("tcode.tm","w");
    emitComment("Tiger Compilation to TM Code");
    emitComment(s);
   
@@ -689,12 +689,11 @@ void codeGen(TreeNode * syntaxTree, char * codefile)
    
    cGen(syntaxTree);
    
-emitBackup(savedLoc2);
+	emitBackup(savedLoc2);
 
  addr = findAddr("in");
      emitRM_Abs("LDA",pc,addr,"jump to fn");
-         
-	 emitRestore(); 
+         emitRestore(); 
    emitComment("End of execution.");
    emitRO("HALT",0,0,0,"");
 }
