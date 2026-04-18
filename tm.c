@@ -235,17 +235,18 @@ int readInstructions (void)
   }
   lineNo = 0 ;
   while (! feof(pgm))
-  { fgets( in_Line, LINESIZE-2, pgm  ) ;
-    inCol = 0 ; 
+  { if (fgets( in_Line, LINESIZE-2, pgm ) == NULL) break;
+    inCol = 0 ;
     lineNo++;
     lineLen = strlen(in_Line)-1 ;
-    if (in_Line[lineLen]=='\n') in_Line[lineLen] = '\0' ;
+    if (lineLen >= 0 && in_Line[lineLen]=='\n') in_Line[lineLen] = '\0' ;
     else in_Line[++lineLen] = '\0';
     if ( (nonBlank()) && (in_Line[inCol] != '*') )
     { if (! getNum())
         return error("Bad location", lineNo,-1);
       loc = num;
-      if (loc > IADDR_SIZE)
+      /* BUGFIX: `loc == IADDR_SIZE` is already out of range. */
+      if (loc >= IADDR_SIZE)
         return error("Location too large",lineNo,loc);
       if (! skipCh(':'))
         return error("Missing colon", lineNo,loc);
@@ -311,7 +312,8 @@ STEPRESULT stepTM (void)
   int ok ;
 
   pc = reg[PC_REG] ;
-  if ( (pc < 0) || (pc > IADDR_SIZE)  )
+  /* BUGFIX: `pc == IADDR_SIZE` is already out of range. */
+  if ( (pc < 0) || (pc >= IADDR_SIZE)  )
       return srIMEM_ERR ;
   reg[PC_REG] = pc + 1 ;
   currentinstruction = iMem[ pc ] ;
@@ -328,7 +330,8 @@ STEPRESULT stepTM (void)
       r = currentinstruction.iarg1 ;
       s = currentinstruction.iarg3 ;
       m = currentinstruction.iarg2 + reg[s] ;
-      if ( (m < 0) || (m > DADDR_SIZE))
+      /* BUGFIX: `m == DADDR_SIZE` is already out of range. */
+      if ( (m < 0) || (m >= DADDR_SIZE))
          return srDMEM_ERR ;
       break;
 
@@ -352,9 +355,11 @@ STEPRESULT stepTM (void)
     /***********************************/
       do
       { printf("Enter value for IN instruction: ") ;
-        fflush (stdin);
+        /* fflush(stdin) is UB; fgets() replaces the dangerous gets(). */
         fflush (stdout);
-        gets(in_Line);
+        if (fgets(in_Line, LINESIZE, stdin) == NULL) in_Line[0] = '\0';
+        { size_t __len = strlen(in_Line);
+          if (__len > 0 && in_Line[__len-1] == '\n') in_Line[__len-1] = '\0'; }
         lineLen = strlen(in_Line) ;
         inCol = 0;
         ok = getNum();
@@ -405,9 +410,15 @@ int doCommand (void)
   int regNo, loc;
   do
   { printf ("Enter command: ");
-    fflush (stdin);
+    /* fflush(stdin) is UB; use fgets() instead of the dangerous gets(). */
     fflush (stdout);
-    gets(in_Line);
+    if (fgets(in_Line, LINESIZE, stdin) == NULL) {
+      /* EOF on stdin: behave like a quit so the loop terminates. */
+      strcpy(in_Line, "q");
+    } else {
+      size_t __len = strlen(in_Line);
+      if (__len > 0 && in_Line[__len-1] == '\n') in_Line[__len-1] = '\0';
+    }
     lineLen = strlen(in_Line);
     inCol = 0;
   }
@@ -557,7 +568,7 @@ int doCommand (void)
 /* E X E C U T I O N   B E G I N S   H E R E */
 /********************************************/
 
-main( int argc, char * argv[] )
+int main( int argc, char * argv[] )
 { if (argc != 2)
   { printf("usage: %s <filename>\n",argv[0]);
     exit(1);

@@ -1,6 +1,7 @@
 /*   table.c - Functions to manipulate generic tables                  */
 
 #include <stdio.h>
+#include <stdint.h>     /* for uintptr_t */
 #include "util.h"
 #include "table.h"
 
@@ -31,7 +32,7 @@ TAB_table TAB_empty(void)
 }
 
 /* The cast from pointer to integer in the expression
- *   ((unsigned)key) % TABSIZE
+ *   ((unsigned)(uintptr_t)key) % TABSIZE
  * may lead to a warning message.  However, the code is safe,
  * and will still operate correctly.  This line is just hashing
  * a pointer value into an integer value, and no matter how the
@@ -42,7 +43,7 @@ TAB_table TAB_empty(void)
 void TAB_enter(TAB_table t, void *key, void *value)
 {int index;
  //assert(t && key);
- index = ((unsigned)key) % TABSIZE;
+ index = ((unsigned)(uintptr_t)key) % TABSIZE;
  t->table[index] = Binder(key, value,t->table[index], t->top);
  t->top = key;
 }
@@ -51,7 +52,7 @@ void *TAB_look(TAB_table t, void *key)
 {int index;
  binder b;
  //assert(t && key);
- index=((unsigned)key) % TABSIZE;
+ index=((unsigned)(uintptr_t)key) % TABSIZE;
  for(b=t->table[index]; b; b=b->next)
    if (b->key==key) return b->value;
  return NULL;
@@ -62,7 +63,7 @@ void *TAB_pop(TAB_table t) {
   //assert (t);
   k = t->top;
   //assert (k);
-  index = ((unsigned)k) % TABSIZE;
+  index = ((unsigned)(uintptr_t)k) % TABSIZE;
   b = t->table[index];
   //assert(b);
   t->table[index] = b->next;
@@ -72,7 +73,7 @@ void *TAB_pop(TAB_table t) {
 
 void TAB_dump(TAB_table t, void (*show)(void *key, void *value)) {
   void *k = t->top;
-  int index = ((unsigned)k) % TABSIZE;
+  int index = ((unsigned)(uintptr_t)k) % TABSIZE;
   binder b = t->table[index];
   if (b==NULL) return;
   t->table[index]=b->next;

@@ -8,7 +8,7 @@
 #include "scan.c"
 #include "parse.h"
 
-extern TraceScan;
+extern int TraceScan;
 static TokenType token; /* holds current token */
 
 /* function prototypes for recursive calls */
@@ -62,13 +62,16 @@ void match(TokenType expected){
 
   if (token == expected){
     token = getToken();
-    printf ("FIle : %s  line :  %d.\n",__FILE__, __LINE__); 
+#ifdef DEBUG
+    printf ("FIle : %s  line :  %d.\n",__FILE__, __LINE__);
+#endif
   }
   else {
     syntaxError("unexpected token -> ");
     printToken(token,tokenString);
     fprintf(stdout,"      ");
-    exit(0);
+    /* Non-zero exit: shell should see a real failure. */
+    exit(1);
     /*
       old_line=lineno;
       while(lineno==old_line)
@@ -81,19 +84,31 @@ void match(TokenType expected){
 TreeNode * Let_exp(void){ 
   TreeNode * t = newStmtNode(LetK),*temp = NULL;
   match(LET);
+#ifdef DEBUG
   printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   if(t!=NULL)  
     t->child[0]=Decl_list();
   match(IN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   if(t!=NULL &&token!=END)
     t->child[1]=Expr_seq();
+  /* BUGFIX: child[1] can be NULL for `let ... in end` (empty body).
+   * Guard the walk to the last expression to avoid NULL deref. */
   temp = t->child[1];
-  while(temp->sibling != NULL)
-    temp = temp->sibling;
-  t->type = temp->type;
+  if (temp != NULL) {
+    while (temp->sibling != NULL)
+      temp = temp->sibling;
+    t->type = temp->type;
+  } else {
+    t->type = ETYPE_NIL;
+  }
   match(END);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   return t;
 }
 
@@ -101,23 +116,35 @@ TreeNode * If_exp(void){
 
   TreeNode * t = newStmtNode(IfK);
   match(IF);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   if (t!=NULL) 
     t->child[0] = expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
   match(THEN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   if (t!=NULL) 
     t->child[1] = expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
   t->type = (t->child[1])->type;
   //t->attr.id.datatype = (t->child[1])->attr.id.datatype; 	TODO
   if (token==ELSE) {
     match(ELSE);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
     if (t!=NULL) 
       t->child[2] = expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
   }
   return t;
 }
@@ -126,25 +153,39 @@ TreeNode * For_exp(void){
 
   TreeNode * t = newStmtNode(ForK);
   match(FOR);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   if ((t!=NULL) && (token==ID)){
     t->attr.id.name = copyString(tokenString);
     t->attr.id.datatype=SIMPLEID;
   }
   match(ID);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   match(ASSIGN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   if (t!=NULL) 
     t->child[0] = expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
   match(TO);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   if (t!=NULL) 
     t->child[1] = expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
   match(DO);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   if(t!=NULL)  
     t->child[2] = exp4break(t);
   t->type = (t->child[2])->type;
@@ -156,12 +197,18 @@ TreeNode * While_exp(void){
 
   TreeNode * t = newStmtNode(WhileK);
   match(WHILE);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   if (t!=NULL) 
     t->child[0] = expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
   match(DO);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   if (t!=NULL) 
     t->child[1] = exp4break(t);
   t->type = (t->child[1])->type;
@@ -190,21 +237,33 @@ TreeNode * Id_exp(void){
     t->attr.id.datatype=SIMPLEID;
   }
   match(ID);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   switch(token){
   case LBRACK: t->attr.id.datatype=ARRAYID;
     match(LBRACK);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
     if (t!=NULL)    t->child[0]=expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
     match(RBRACK);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
     if(token==OF)
       {
 	match(OF);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
 	t->child[1]=expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
       }
     else if(token==ASSIGN)
       {
@@ -213,18 +272,26 @@ TreeNode * Id_exp(void){
 	p->child[0]=t;
 	t=p;
 	match(ASSIGN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
 	t->child[1]=expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
       }
     
 	       break;
   case  LPAREN : t->attr.id.datatype=FUNCTIONCALL;
     match(LPAREN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
     if(t!=NULL&&token!=RPAREN)  t->child[0]=Exp_list();
     match(RPAREN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
     break;
   case  ASSIGN :  
     p=newStmtNode(OpK);
@@ -232,9 +299,13 @@ TreeNode * Id_exp(void){
     p->child[0]=t;
     t=p;
     match(ASSIGN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
     if (t!=NULL) t->child[1] = expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
     break;
     
   default:  return t;
@@ -252,39 +323,59 @@ TreeNode * Lvalue_exp(void)
     }
   
   match(ID);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   switch(token)
     {
     case LBRACK:  t->attr.id.datatype=ARRAYID;
       match(LBRACK);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       if (t!=NULL)    t->child[0]=expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
       match(RBRACK);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       if(token==OF)
 	{
 	  match(OF);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
 	  t->child[1]=expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
 	}
       
       break;
     case  LPAREN : t->attr.id.datatype=FUNCTIONCALL;
       match(LPAREN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       if(t!=NULL&&token!=RPAREN)  t->child[0]=Exp_list();
       match(RPAREN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       break;
     case  ASSIGN : p=newStmtNode(AssignK);
       p->child[0]=t;
       t=p;
       match(ASSIGN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       if (t!=NULL) t->child[1] = expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
       break;
       
     default:     p = newStmtNode(IdK);
@@ -308,7 +399,9 @@ TreeNode * Str_const(void)
       t->type = ETYPE_STRING;
     }
   match(STRING);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   return t;
 }
 
@@ -322,7 +415,9 @@ TreeNode * Int_exp(void)
       t->attr.id.name = copyString(tokenString);	
 	}
   match(INT);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   return t;
 }
 
@@ -330,38 +425,52 @@ TreeNode * Nil_exp(void)
 { TreeNode * t = newStmtNode(NilK);
   t->type = ETYPE_NIL;
   match(NIL);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   return t;
 }
 
 TreeNode * Par_exp(void)
 { TreeNode * t = newStmtNode(Par_expK);
    match(LPAREN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
    if(token==RPAREN)
      {
        t=newStmtNode(NilK);
        match(RPAREN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
        return t;
      }
    if(t!=NULL)     t->child[0]=Expr_seq();
    match(RPAREN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
    return t;
 }
 
 TreeNode * Expr_seq(void)
 {TreeNode *q=NULL,*temp=NULL;
 TreeNode * t =expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
 temp=t;
    while(token!=RPAREN &&token!=END&&token!=ENDFILE)
      {
        match(SEMICOLON);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
        q=expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
        if(q!=NULL) 
 	 {
 	   temp->sibling=q;
@@ -373,17 +482,24 @@ temp=t;
 }
 
 
+/* BUGFIX: previous code did `t->sibling = q` on every iteration, so only
+ * the *last* argument survived.  We now chain siblings via a running
+ * `tail` pointer so calls like  f(a, b, c)  preserve every argument. */
 TreeNode * Exp_list(void)
-{ TreeNode *q=NULL;
-  TreeNode * t =expr();
- printf("Returned from  line : %d \n", __LINE__);  
-  while(token!=RPAREN &&token!=END&&token!=ENDFILE)
+{ TreeNode *q = NULL, *tail = NULL;
+  TreeNode * t = expr();
+  tail = t;
+  while(token!=RPAREN && token!=END && token!=ENDFILE)
     {
       match(COMMA);
- printf("Returned from match  at line : %d \n", __LINE__);
-      q=expr();
- printf("Returned from  line : %d \n", __LINE__);
-      if(q!=NULL) t->sibling=q;
+      q = expr();
+      if (q != NULL && tail != NULL) {
+        tail->sibling = q;
+        tail = q;
+      } else if (q != NULL) {
+        t = q;
+        tail = q;
+      }
     }
   return t;
 }
@@ -403,11 +519,15 @@ TreeNode * Decl_list(void){
     switch(token){
     case TYPE:  
       match(TYPE);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       temp=newStmtNode(Type_declK);
       temp->child[0]=Typeid();
       match(EQ);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       temp->child[1]=Type();
       types[typecount].typeid = (temp->child[0])->attr.id.name; //store type definitions
       types[typecount].type = (temp->child[1])->type;
@@ -423,31 +543,47 @@ TreeNode * Decl_list(void){
 	type=type->sibling;
       }
       match(token);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       break;
     case VAR:	
       match(VAR);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       temp=newStmtNode(Var_declK);
       temp->attr.id.name = copyString(tokenString);
       temp->attr.id.datatype=SIMPLEID;
       match(ID);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       if(token==COLON){
 	match(COLON);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
 	temp->child[0]=Typeid();
 	temp->type = (temp->child[0])->type;
 	temp->attr.id.datatype = (temp->child[0])->attr.id.datatype;
 	match(ASSIGN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
 	temp->child[1]=expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
       }else{
 	match(ASSIGN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
 	temp->child[1]=expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
 	temp->type = (temp->child[1])->type;
       }
       if(var->child[1]==NULL) {
@@ -460,28 +596,42 @@ TreeNode * Decl_list(void){
     case FUNCTION:
       temp=newStmtNode(Func_declK);
       match(FUNCTION);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       temp->attr.id.name = copyString(tokenString);
       temp->attr.id.datatype=FUNCTIONCALL;
       match(ID);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       match(LPAREN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       if(token!=RPAREN)
 	temp->child[0]=Typefields();
       match(RPAREN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       if(token==COLON){
 	match(COLON);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
 	temp->child[1]=Typeid();
 	(t->child[2])->type = (temp->child[1])->type;
       }else
 	t->child[2]->type = ETYPE_NIL;
       match(EQ);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       temp->child[2]=expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
 	if(func->child[0]==NULL) {
 	  func=temp; t->child[2]=func; 
 	}else{
@@ -530,7 +680,9 @@ TreeNode * Typeid(void){
   
   // else Error=TRUE;
   match(token);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   return t;
 }
 
@@ -563,9 +715,13 @@ TreeNode * Type(void)
       t->attr.id.datatype=ARRAYID;
       
       match(ARRAY);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       match(OF);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       if(t!=NULL)
 	{
 	  if(token==INT)
@@ -610,9 +766,13 @@ TreeNode * Typefields(void)
   TreeNode * t=newStmtNode(TypefieldK),*p=NULL,*temp=NULL;
   t->attr.id.name = copyString(tokenString);
   match(ID);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   match(COLON);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   t->child[0]=Typeid();
   t->attr.id.datatype = (t->child[0])->attr.id.datatype;
   t->type = t->child[0]->type;
@@ -621,13 +781,19 @@ TreeNode * Typefields(void)
   while(token!=RPAREN&&token!=ENDFILE)
     {
       match(COMMA);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       temp=newStmtNode(TypefieldK);
       temp->attr.id.name = copyString(tokenString);
       match(ID);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       match(COLON);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       temp->child[0]=Typeid();
       temp->attr.id.datatype = (temp->child[0])->attr.id.datatype;
       temp->type = temp->child[0]->type;
@@ -657,7 +823,9 @@ TreeNode * expr(void)
     {
     case LET: 	
 	t=Let_exp();
+#ifdef DEBUG
      printf("Return Let_Exp at line : %d\n", __LINE__);
+#endif
       break;
     case IF: 	t=If_exp();
       break;
@@ -699,7 +867,9 @@ TreeNode * exp4break(TreeNode *p)
   switch(token)
     {
     case LET: 	t=Let_exp();
+#ifdef DEBUG
      printf("Return from LetExp at line :  %d \n", __LINE__);
+#endif
       break;
     case IF: 	t=If_exp();
       break;
@@ -744,7 +914,9 @@ TreeNode * Comp_exp(void)
 	  // p->child[0] = t;
 	  t = p;
 	  match(token);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
 	  t->child[1] = newStmtNode(IntK);	/*	exp1 OR exp2 converted to: if exp1 then 1 else exp2 */
 	  (t->child[1])->attr.val=1;
 	  t->child[2]=Bin_exp();
@@ -763,7 +935,9 @@ TreeNode * Bin_exp(void)
       p->child[0] = t;
       t = p;
       match(token);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       t->child[1] = Bin1_exp();
 	  t->child[2] = newStmtNode(IntK);	/*	exp1 AND exp2 converted to: if exp1 then exp2 else 0 */
 	  (t->child[2])->attr.val=0;
@@ -778,10 +952,14 @@ TreeNode * Bin1_exp(void)
  if(token==LPAREN)
  {
   match(LPAREN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   t->child[0]=Bin1_exp();
   match(RPAREN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
   if(token==LT||token==LE||token==GT||token==GE||token==EQ||token==NEQ)
   {
    p=newStmtNode(OpK);
@@ -789,7 +967,9 @@ TreeNode * Bin1_exp(void)
    p->child[0]=t->child[0];
    t->child[0]=p;
    match(token);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
    if(lookahead(1,0)==LPAREN)
 	t->child[1]=Bin1_exp();
    else
@@ -807,7 +987,9 @@ TreeNode * Bin1_exp(void)
     p->child[0]=t->child[0];
     t->child[0]=p;
 	match(token);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
 	//t->child[1]=Simp_exp();
 	p->child[1]=Simp_exp();
    }
@@ -829,7 +1011,9 @@ TreeNode * Simp_exp(void)
       p->attr.op = token;
       t = p;
       match(token);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       t->child[1] = term();
 	}
     t->type = ETYPE_INTEGER;
@@ -846,7 +1030,9 @@ TreeNode * term(void)
       p->attr.op = token;
       t = p;
       match(token);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       p->child[1] = factor();
     }
     t->type = ETYPE_INTEGER;
@@ -861,7 +1047,9 @@ TreeNode * factor(void)
     {
     t=newStmtNode(NegatedK);
    match(MINUS);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
    t->child[0]=Paran_exp();
    t->type = t->child[0]->type;
   }
@@ -883,18 +1071,26 @@ TreeNode * Paran_exp(void)
       t->type = ETYPE_INTEGER;
 		t->attr.id.name = copyString(tokenString);
 		match(INT);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       break;
     case ID :
       t = Lvalue_exp();               //t = Lvalue_exp();
       break;
     case LPAREN :
       match(LPAREN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       t = expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
       match(RPAREN);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
       break;
     case STRING:
 	  t = newStmtNode(Str_constK);
@@ -905,11 +1101,15 @@ TreeNode * Paran_exp(void)
 		t->type = ETYPE_STRING;
 	  }
       match(STRING);
+#ifdef DEBUG
  printf("Returned from match  at line : %d \n", __LINE__);
+#endif
     default:
       syntaxError("unexpected token -> ");
       printToken(token,tokenString);
+#ifdef DEBUG
       printf ("FIle : %s  line :  %d.\n",__FILE__, __LINE__);
+#endif
       token = getToken();
       break;
     }
@@ -919,10 +1119,14 @@ TreeNode * Paran_exp(void)
 TreeNode * parse(void)
 { 
   TreeNode * t;
+#ifdef DEBUG
   printf ("FIle : %s  line :  %d.\n",__FILE__, __LINE__);
+#endif
   token = getToken();
   t = expr();
+#ifdef DEBUG
  printf("Returned from  line : %d \n", __LINE__);
+#endif
   if (token!=ENDFILE)
     syntaxError("Code ends before file\n");
   return t;
