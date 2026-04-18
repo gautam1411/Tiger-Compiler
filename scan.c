@@ -55,7 +55,9 @@ int getNextChar(void)
       if (fgets(lineBuf,BUFLEN-1,source))
 	{ 
 #ifdef DEBUG
+#ifdef DEBUG
 	  printf("Current line from tiger source : %s \n", lineBuf);
+#endif
 #endif
 	  if (EchoSource) 
 	    fprintf(listing,"%4d: %s",lineno,lineBuf);
@@ -66,7 +68,7 @@ int getNextChar(void)
       else
 	{ 
 	  EOF_flag = TRUE;
-#ifdef DEBUG DEBUG
+#ifdef DEBUG
 	  printf("End of file \n");
 #endif
 	  return EOF;
@@ -168,7 +170,8 @@ TokenType lookahead(int n,int lcontinue)
 	 {
 	   /*address of linepos passed since it needs to be accessed by Lookahead() and Ungetlookahead() 
 	     and corresponding changes must be reflected */
-	   char c = lookaheadchar(&L_linepos,L_linebuf,lineno,bufsize);
+	   /* Use int so EOF (-1) is preserved; see getToken. */
+	   int c = lookaheadchar(&L_linepos,L_linebuf,lineno,bufsize);
 	   switch (state)
 	     { case START:
 		 if (isdigit(c))
@@ -196,7 +199,9 @@ TokenType lookahead(int n,int lcontinue)
 		       { 
 		       case EOF:
 			 currentToken = ENDFILE;
+#ifdef DEBUG
 			 printf(" ENDFILE token at line : %d in  %s \n", __LINE__, __FILE__);
+#endif
 			 break;
 		       case '=':
 			 currentToken = EQ;
@@ -248,7 +253,9 @@ TokenType lookahead(int n,int lcontinue)
 			 break;
 		       default:
 			 currentToken = ERROR;
+#ifdef DEBUG
 			 printf("File : %s  Line : %d \n", __FILE__, __LINE__);
+#endif
 			 break;
 		       }
 		   }
@@ -268,7 +275,9 @@ TokenType lookahead(int n,int lcontinue)
 		 { state = DONE;
 		   
 		   currentToken = ENDFILE;
+#ifdef DEBUG
 		   printf(" ENDFILE token at line : %d in  %s \n", __LINE__, __FILE__);
+#endif
 		 }
 	       else if (c == '*')
 		 {
@@ -363,7 +372,9 @@ TokenType lookahead(int n,int lcontinue)
 		 }
 	       else {  
 		 currentToken=ERROR;
+#ifdef DEBUG
 		 printf("File : %s  Line : %d \n", __FILE__, __LINE__);
+#endif
 	       }
 	       break;
 	     case INESCD1:
@@ -373,7 +384,10 @@ TokenType lookahead(int n,int lcontinue)
 		   state=INESCD2;
 		 }else{
 		 currentToken=ERROR;    
-		 printf("File : %s  Line : %d \n", __FILE__, __LINE__);   }
+#ifdef DEBUG
+		 printf("File : %s  Line : %d \n", __FILE__, __LINE__);
+#endif
+		 }
 	       break;
 	     case INESCD2:
 	       
@@ -392,7 +406,9 @@ TokenType lookahead(int n,int lcontinue)
 	       fprintf(listing,"Scanner Bug: state= %d\n",state);
 	       state = DONE;
 	       currentToken = ERROR;
+#ifdef DEBUG
 	       printf("File : %s  Line : %d \n", __FILE__, __LINE__);
+#endif
 	       break;
 	     } 
 	 }
@@ -420,10 +436,13 @@ TokenType getToken(void){
   int save;
   /* character array to hold ascii code of escape sequence inside a string */
   char ascii[4];
-  while (state != DONE){ 
-    char c = getNextChar();
+  while (state != DONE){
+    /* c must be int so that EOF (-1) is preserved; a plain char
+       would be promoted to 255 on platforms where char is unsigned,
+       and the EOF case below would never match. */
+    int c = getNextChar();
     save = TRUE;
-    switch (state){ 
+    switch (state){
     case START:
       if (isdigit(c))
 	state = INNUM;
@@ -450,7 +469,9 @@ TokenType getToken(void){
 	case EOF:
 	  save = FALSE;
 	  currentToken = ENDFILE;
+#ifdef DEBUG
 	  printf(" ENDFILE token at line : %d in  %s \n", __LINE__, __FILE__);
+#endif
 	  break;
 	case '=':
 	  currentToken = EQ;
@@ -501,8 +522,10 @@ TokenType getToken(void){
 	  currentToken=OR;
 	  break;
 	default:
+#ifdef DEBUG
           printf("File : %s  Line : %d \n", __FILE__, __LINE__);
           printf("Current character : %d \n",(int)c);
+#endif
 	  currentToken = ERROR;
 	  break;
 	}
@@ -526,7 +549,9 @@ TokenType getToken(void){
 	state = DONE;
 	save=FALSE;
 	currentToken = ENDFILE;
-         printf(" ENDFILE token at line : %d in  %s \n", __LINE__, __FILE__);
+#ifdef DEBUG
+	printf(" ENDFILE token at line : %d in  %s \n", __LINE__, __FILE__);
+#endif
       }
       else if (c == '*'){
 	state = INCOMMENT2;
@@ -621,7 +646,10 @@ TokenType getToken(void){
 	  }
       else  { 
 	currentToken=ERROR;
-      printf("File : %s  Line : %d \n", __FILE__, __LINE__); }
+#ifdef DEBUG
+      printf("File : %s  Line : %d \n", __FILE__, __LINE__);
+#endif
+      }
       break;
     case INESCD1:
       save=FALSE;
@@ -632,7 +660,9 @@ TokenType getToken(void){
 	}
       else{ 
 	currentToken=ERROR; 
+#ifdef DEBUG
 	printf("File : %s  Line : %d \n", __FILE__, __LINE__); 
+#endif
       }
       break;
     case INESCD2:
@@ -646,14 +676,19 @@ TokenType getToken(void){
 	  save=TRUE;
 	}else{  
 	currentToken=ERROR;  
-	printf("File : %s  Line : %d \n", __FILE__, __LINE__); }
+#ifdef DEBUG
+	printf("File : %s  Line : %d \n", __FILE__, __LINE__);
+#endif
+	}
       break;
     case DONE:
     default: /* should never happen */
       fprintf(listing,"Scanner Bug: state= %d\n",state);
       state = DONE;
       currentToken = ERROR;
+#ifdef DEBUG
       printf("File : %s  Line : %d \n", __FILE__, __LINE__);
+#endif
       break;
     }
     if ((save) && (tokenStringIndex <= MAXTOKENLEN))
@@ -668,7 +703,9 @@ TokenType getToken(void){
   if (TraceScan) {
     fprintf(listing,"\t%d: ",lineno);
     printToken(currentToken,tokenString);
+#ifdef DEBUG
     printf("Token: <  %s  >  at Line : %d \n", tokenString, lineno);
+#endif
   }
   return currentToken;
 } /* end getToken */

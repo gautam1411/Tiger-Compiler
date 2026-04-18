@@ -17,7 +17,9 @@ struct ParameterList_
  };
 
  typedef struct EnvEntry_ *EnvEntry;
- static struct EnvEntry_
+ /* `static` on a struct *definition* (no variable) is a useless
+  * storage-class specifier; drop it. */
+ struct EnvEntry_
  {
 	enum { VARENTRY, FUNCTIONENTRY, TYPEENTRY } kind;
 	ExpType type;
@@ -52,15 +54,19 @@ return cur;
 
 ExpType getNodeType(TreeNode *t, S_table venv, S_table tenv)
 {
-  if(t->expkind != IdK && t->expkind != LvalueK )
-	{
-		return t->type;
-	}
-	enventry1 = S_look(venv,S_Symbol(t->attr.id.name));
-	if(enventry1 == NULL)
-		enventry1 = S_look(tenv,S_Symbol(t->attr.id.name));
-	return enventry1->type;
+  if (t == NULL) return ETYPE_NIL;
+  if (t->expkind != IdK && t->expkind != LvalueK)
+    return t->type;
 
+  /* BUGFIX: previously dereferenced enventry1 without checking for
+   * NULL, which crashed the compiler on any undefined identifier
+   * rather than producing a semantic error. */
+  enventry1 = S_look(venv, S_Symbol(t->attr.id.name));
+  if (enventry1 == NULL)
+    enventry1 = S_look(tenv, S_Symbol(t->attr.id.name));
+  if (enventry1 == NULL)
+    return t->type;  /* fall back to the AST type; error is reported elsewhere */
+  return enventry1->type;
 }
 
  void show(S_symbol name, void *value)
@@ -131,13 +137,21 @@ ExpType getNodeType(TreeNode *t, S_table venv, S_table tenv)
 	return;
 
 
+#ifdef DEBUG
   printf("At line : %d \n", __LINE__);
+#endif
   transExp(tenv,venv,t);
+#ifdef DEBUG
 printf("At line : %d \n", __LINE__);
+#endif
   S_dump(tenv, show);
+#ifdef DEBUG
 printf("At line : %d \n", __LINE__);
+#endif
   S_dump(venv, show);
+#ifdef DEBUG
 printf("At line : %d \n", __LINE__);
+#endif
  }
 
  void transExp(S_table tenv,S_table venv, TreeNode *t)
@@ -182,7 +196,11 @@ printf("At line : %d \n", __LINE__);
 				enventry2->u.datatype = SIMPLEID;
 				S_beginScope(venv);
 				s = S_Symbol(t->attr.id.name);
-				S_enter(tenv, s ,enventry2);
+				/* BUGFIX: the for-loop index is a *value* binding; it was
+				 * previously being added to the type env (tenv) which is
+				 * never consulted for variables, so references to the
+				 * index inside the body would fail. */
+				S_enter(venv, s ,enventry2);
 				transExp(tenv,venv,t->child[2]);
 				S_endScope(venv);
 				break;
@@ -191,8 +209,15 @@ printf("At line : %d \n", __LINE__);
 		case NilK:
 			 break;
 		case BreakK:
-				if(t->attr.loopaddr->expkind!=ForK||t->attr.loopaddr->expkind!=WhileK)
-				semantError("Break statement not within while or  for statement",t->lineno);
+				/* BUGFIX: `||` was tautologically true (a value cannot be
+				 * two different kinds at once), so this check always
+				 * reported an error even for legal `break`s.  It should
+				 * fire only when the enclosing context is *neither* a
+				 * for- nor while-loop. */
+				if (t->attr.loopaddr == NULL ||
+				    (t->attr.loopaddr->expkind != ForK &&
+				     t->attr.loopaddr->expkind != WhileK))
+					semantError("Break statement not within while or for statement",t->lineno);
 		      break;
 		case OpK: 
 				enventry1 = NULL;
@@ -297,19 +322,27 @@ printf("At line : %d \n", __LINE__);
 								strcat(semantErrorMsg,t->attr.id.name);
 								semantError(semantErrorMsg,t->lineno);
 							}
-							else 
+							else
 							{
+								/* BUGFIX: reverseList() mutates its argument
+								 * in place; calling it every time a function
+								 * was invoked flipped the stored parameter
+								 * list back and forth, producing wrong-order
+								 * type errors on alternate calls.  We now
+								 * walk the list as it is stored (which is
+								 * already the reverse insertion order used
+								 * in transDecs); if the declaration order
+								 * is ever normalized there, this walk still
+								 * compares types 1-to-1. */
 								temp = t->child[0];
-								for(paramtemp = reverseList(enventry->u.params); paramtemp!=NULL; paramtemp=paramtemp->next)
-								{
-									if(getNodeType(temp,venv,tenv) != paramtemp->exptype)
-									{
+								paramtemp = enventry->u.params;
+								while (paramtemp != NULL && temp != NULL) {
+									if (getNodeType(temp,venv,tenv) != paramtemp->exptype)
 										semantError("type mismatch in function arguments",t->lineno);
-									}
 									temp = temp->sibling;
+									paramtemp = paramtemp->next;
 								}
-								if(temp!= NULL || paramtemp != NULL)
-								{
+								if (temp != NULL || paramtemp != NULL) {
 									semantError("Number of function arguments do not match",t->lineno);
 									break;
 								}
@@ -324,10 +357,15 @@ printf("At line : %d \n", __LINE__);
 		//case Comp_expK:
 					
 		case AssignK:
+					/* BUGFIX: comparing raw AST types missed the lookup
+					 * for identifier nodes whose type is only known
+					 * through the env.  Use getNodeType, which resolves
+					 * identifiers through the env and is NULL-safe. */
 					transExp(tenv,venv,t->child[0]);
-					if(t->child[0]->type != t->child[1]->type )
-						semantError("type mismatch in assignment expression ",t->lineno);
 					transExp(tenv,venv,t->child[1]);
+					if (t->child[0] && t->child[1] &&
+					    getNodeType(t->child[0],venv,tenv) != getNodeType(t->child[1],venv,tenv))
+						semantError("type mismatch in assignment expression", t->lineno);
 					break;
 		
 		//case Bin_expK:

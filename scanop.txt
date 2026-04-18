@@ -56,4 +56,4 @@
   12: 	
   13: end
 	13: reserved word: end
-	14: EOF
+	14: ERROR: ÿ

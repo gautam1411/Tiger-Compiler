@@ -7,7 +7,10 @@
 #include <string.h>
 #include "util.h"
 
-# define DEBUG TRUE
+/* Historically this was `# define DEBUG TRUE`, which (a) contradicted
+ * config.h's `#define DEBUG FALSE` and (b) forced every tracing block
+ * in every translation unit to be active.  Remove: DEBUG is now only
+ * a *presence* macro controlled at build time (e.g. `-DDEBUG`). */
 void *checked_malloc(int len)
 {void *p = malloc(len);
  if (!p) {
@@ -146,7 +149,8 @@ TreeNode * newStmtNode(ExpKind exp)
 /* Variable indentno is used by printTree to
  * store current number of spaces to indent
  */
-static indentno = 0;
+/* Implicit-int was removed in C99. */
+static int indentno = 0;
 
 /* macros to increase/decrease indentation */
 #define INDENT indentno+=2
